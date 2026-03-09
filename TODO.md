@@ -1,4 +1,5 @@
 * [ ] brush size controlled via slider
+* [ ] make the UI responsive
 * [ ] erase all
 * [ ] drawing lines instead of circle
 * [ ] eraser

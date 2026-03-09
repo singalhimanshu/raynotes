@@ -7,9 +7,10 @@ ColorPickerConfig :: struct {
 	bounds: rl.Rectangle,
 }
 
-DrawConfig :: struct {
+Config :: struct {
 	isPenButtonPressed: bool,
 	curColor:           rl.Color,
+	colorPickerConfig:  ColorPickerConfig,
 }
 screen_width :: 800
 screen_height :: 450
@@ -19,11 +20,9 @@ main :: proc() {
 	rl.InitWindow(screen_width, screen_height, "Raynotes")
 	defer rl.CloseWindow()
 
-	colorsSelection: DrawConfig = {
+	config: Config = {
 		curColor = rl.RED,
-	}
-	colorPickerConfig: ColorPickerConfig = {
-		bounds = rl.Rectangle{10, 40, 100, 100},
+		colorPickerConfig = {bounds = rl.Rectangle{10, 40, 100, 100}},
 	}
 
 	target := rl.LoadRenderTexture(screen_width, screen_height)
@@ -35,16 +34,12 @@ main :: proc() {
 	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
-		update(&colorsSelection, target, &colorPickerConfig)
-		draw(target, &colorsSelection, &colorPickerConfig)
+		update(&config, target)
+		draw(target, &config)
 	}
 }
 
-draw :: proc(
-	target: rl.RenderTexture2D,
-	colorsSelection: ^DrawConfig,
-	colorPickerConfig: ^ColorPickerConfig,
-) {
+draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 	rl.BeginDrawing()
 	defer rl.EndDrawing()
 	rl.ClearBackground(rl.RAYWHITE)
@@ -59,31 +54,27 @@ draw :: proc(
 
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > 50 {
-		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), 50, colorsSelection.curColor)
+		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), 50, config.curColor)
 	}
 	rl.GuiPanel(rl.Rectangle{0, 0, screen_width, 50}, nil)
 	if rl.GuiButton(rl.Rectangle{10, 10, 60, 40}, "Pen Color") {
-		colorsSelection.isPenButtonPressed = !colorsSelection.isPenButtonPressed
+		config.isPenButtonPressed = !config.isPenButtonPressed
 	}
-	if colorsSelection.isPenButtonPressed {
-		rl.GuiColorPicker(colorPickerConfig.bounds, nil, &colorsSelection.curColor)
+	if config.isPenButtonPressed {
+		rl.GuiColorPicker(config.colorPickerConfig.bounds, nil, &config.curColor)
 	}
 }
 
-update :: proc(
-	colorsSelection: ^DrawConfig,
-	target: rl.RenderTexture2D,
-	colorPickerConfig: ^ColorPickerConfig,
-) {
+update :: proc(config: ^Config, target: rl.RenderTexture2D) {
 	mousePos := rl.GetMousePosition()
 	// TODO: remove hardcoded values
 	if mousePos.y > 50 &&
 	   rl.IsMouseButtonDown(.LEFT) &&
-	   isOutOfBounds(mousePos.x, mousePos.y, colorPickerConfig.bounds) {
-		colorsSelection.isPenButtonPressed = false
+	   isOutOfBounds(mousePos.x, mousePos.y, config.colorPickerConfig.bounds) {
+		config.isPenButtonPressed = false
 		mousePos := rl.GetMousePosition()
 		rl.BeginTextureMode(target)
-		rl.DrawCircle(i32(mousePos.x), i32(mousePos.y), 20, colorsSelection.curColor)
+		rl.DrawCircle(i32(mousePos.x), i32(mousePos.y), 20, config.curColor)
 		rl.EndTextureMode()
 	}
 }

@@ -11,23 +11,37 @@ PenConfig :: struct {
 	isColorSelectorPressed: bool,
 }
 
+TopPanelConfig :: struct {
+	x:      f32,
+	y:      f32,
+	height: f32,
+	width:  f32,
+}
+
 Config :: struct {
 	curColor:          rl.Color,
 	colorPickerConfig: ColorPickerConfig,
 	penConfig:         PenConfig,
+	topPanelConfig:    TopPanelConfig,
 }
-initial_screen_width :: 800
-initial_screen_height :: 450
+
+TOP_PANEL_HEIGHT_PERCENT :: 0.025
 
 main :: proc() {
 	rl.SetConfigFlags({rl.ConfigFlag.WINDOW_RESIZABLE})
 	rl.InitWindow(0, 0, "Raynotes")
 	defer rl.CloseWindow()
-
+	topPanelConfig: TopPanelConfig = {
+		x      = 0,
+		y      = 0,
+		width  = f32(rl.GetScreenWidth()),
+		height = f32(rl.GetScreenHeight()) * TOP_PANEL_HEIGHT_PERCENT,
+	}
 	config: Config = {
-		curColor = rl.RED,
-		colorPickerConfig = {bounds = rl.Rectangle{10, 40, 100, 100}},
+		curColor = rl.RED, // starting color
+		colorPickerConfig = {bounds = rl.Rectangle{10, 40, 100, 100}}, // TODO:
 		penConfig = {},
+		topPanelConfig = topPanelConfig,
 	}
 
 	target := rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
@@ -36,13 +50,15 @@ main :: proc() {
 	rl.ClearBackground(rl.RAYWHITE)
 	rl.EndTextureMode()
 
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(120)
 
 	for !rl.WindowShouldClose() {
 		if rl.IsWindowResized() {
 			// TODO: problem: right now resizing will remove all the strokes
 			rl.UnloadRenderTexture(target)
 			target = rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
+			config.topPanelConfig.width = f32(rl.GetScreenWidth())
+			config.topPanelConfig.height = f32(rl.GetScreenHeight()) * TOP_PANEL_HEIGHT_PERCENT
 		}
 		update(&config, target)
 		draw(target, &config)
@@ -66,7 +82,15 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 	if mousePos.y > 50 {
 		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), 50, config.curColor)
 	}
-	rl.GuiPanel(rl.Rectangle{0, 0, initial_screen_width, 50}, nil)
+	rl.GuiPanel(
+		rl.Rectangle {
+			config.topPanelConfig.x,
+			config.topPanelConfig.y,
+			config.topPanelConfig.width,
+			config.topPanelConfig.height,
+		},
+		nil,
+	)
 	if rl.GuiButton(rl.Rectangle{10, 10, 60, 40}, "Pen Color") {
 		config.penConfig.isColorSelectorPressed = !config.penConfig.isColorSelectorPressed
 	}

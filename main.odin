@@ -30,7 +30,6 @@ main :: proc() {
 		penConfig = {},
 	}
 
-	fmt.println(rl.GetScreenWidth(), rl.GetScreenHeight())
 	target := rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
 	defer rl.UnloadRenderTexture(target)
 	rl.BeginTextureMode(target)

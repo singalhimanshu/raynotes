@@ -127,7 +127,7 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D) {
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
-	   isOutOfBounds(
+	   is_out_of_bounds(
 		   mousePos.x,
 		   mousePos.y,
 		   rl.Rectangle {
@@ -145,7 +145,7 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D) {
 	}
 }
 
-isOutOfBounds :: proc(mx, my: f32, bounds: rl.Rectangle) -> bool {
+is_out_of_bounds :: proc(mx, my: f32, bounds: rl.Rectangle) -> bool {
 	// +20 because how the color picker works
 	result :=
 		(mx >= bounds.x && mx <= bounds.x + bounds.width + 20) &&

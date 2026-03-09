@@ -3,8 +3,17 @@ package main
 import "core:fmt"
 import rl "vendor:raylib"
 
+// TODO: separate x, y, width, height
 ColorPickerConfig :: struct {
 	bounds: rl.Rectangle,
+}
+
+PenColorButtonConfig :: struct {
+	x:      f32,
+	y:      f32,
+	width:  f32,
+	height: f32,
+	update: proc(this: ^PenColorButtonConfig, rel_width, rel_height: f32),
 }
 
 PenColorSelectorConfig :: struct {
@@ -16,6 +25,7 @@ TopPanelConfig :: struct {
 	y:      f32,
 	height: f32,
 	width:  f32,
+	update: proc(this: ^TopPanelConfig, screen_width, screen_height: i32),
 }
 
 Config :: struct {
@@ -23,6 +33,7 @@ Config :: struct {
 	colorPickerConfig:      ColorPickerConfig,
 	penColorSelectorConfig: PenColorSelectorConfig,
 	topPanelConfig:         TopPanelConfig,
+	penColorButtonConfig:   PenColorButtonConfig,
 }
 
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
@@ -31,18 +42,8 @@ main :: proc() {
 	rl.SetConfigFlags({rl.ConfigFlag.WINDOW_RESIZABLE})
 	rl.InitWindow(0, 0, "Raynotes")
 	defer rl.CloseWindow()
-	topPanelConfig: TopPanelConfig = {
-		x      = 0,
-		y      = 0,
-		width  = f32(rl.GetScreenWidth()),
-		height = f32(rl.GetScreenHeight()) * TOP_PANEL_HEIGHT_PERCENT,
-	}
-	config: Config = {
-		curColor = rl.RED, // starting color
-		colorPickerConfig = {bounds = rl.Rectangle{10, 40, 100, 100}}, // TODO:
-		penColorSelectorConfig = {},
-		topPanelConfig = topPanelConfig,
-	}
+
+	config := create_config()
 
 	target := rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
 	defer rl.UnloadRenderTexture(target)
@@ -57,8 +58,11 @@ main :: proc() {
 			// TODO: problem: right now resizing will remove all the strokes
 			rl.UnloadRenderTexture(target)
 			target = rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
-			config.topPanelConfig.width = f32(rl.GetScreenWidth())
-			config.topPanelConfig.height = f32(rl.GetScreenHeight()) * TOP_PANEL_HEIGHT_PERCENT
+			config.topPanelConfig->update(rl.GetScreenWidth(), rl.GetScreenHeight())
+			config.penColorButtonConfig->update(
+				config.topPanelConfig.width,
+				config.topPanelConfig.height,
+			)
 		}
 		update(&config, target)
 		draw(target, &config)
@@ -79,8 +83,8 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 	)
 
 	mousePos := rl.GetMousePosition()
-	if mousePos.y > 50 {
-		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), 50, config.curColor)
+	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height {
+		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), 50, config.curColor) // TODO: implement pen size
 	}
 	rl.GuiPanel(
 		rl.Rectangle {
@@ -91,7 +95,15 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 		},
 		nil,
 	)
-	if rl.GuiButton(rl.Rectangle{10, 10, 60, 40}, "Pen Color") {
+	if rl.GuiButton(
+		rl.Rectangle {
+			config.penColorButtonConfig.x,
+			config.penColorButtonConfig.y,
+			config.penColorButtonConfig.width,
+			config.penColorButtonConfig.height,
+		},
+		"Pen Color",
+	) {
 		config.penColorSelectorConfig.isColorSelectorPressed = !config.penColorSelectorConfig.isColorSelectorPressed
 	}
 	if config.penColorSelectorConfig.isColorSelectorPressed {
@@ -101,14 +113,13 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 
 update :: proc(config: ^Config, target: rl.RenderTexture2D) {
 	mousePos := rl.GetMousePosition()
-	// TODO: remove hardcoded values
-	if mousePos.y > 50 &&
+	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
 	   isOutOfBounds(mousePos.x, mousePos.y, config.colorPickerConfig.bounds) {
 		config.penColorSelectorConfig.isColorSelectorPressed = false
 		mousePos := rl.GetMousePosition()
 		rl.BeginTextureMode(target)
-		rl.DrawCircle(i32(mousePos.x), i32(mousePos.y), 20, config.curColor)
+		rl.DrawCircle(i32(mousePos.x), i32(mousePos.y), 20, config.curColor) // TODO: implement pen size
 		rl.EndTextureMode()
 	}
 }
@@ -119,4 +130,33 @@ isOutOfBounds :: proc(mx, my: f32, bounds: rl.Rectangle) -> bool {
 		(mx >= bounds.x && mx <= bounds.x + bounds.width + 20) &&
 		(my >= bounds.y && my <= bounds.y + bounds.height)
 	return !result
+}
+
+create_config :: proc() -> Config {
+	topPanelConfig: TopPanelConfig = {}
+	topPanelConfig.update = proc(this: ^TopPanelConfig, screen_width, screen_height: i32) {
+		this.width = f32(screen_width)
+		this.height = f32(screen_height) * TOP_PANEL_HEIGHT_PERCENT
+	}
+	topPanelConfig->update(rl.GetScreenWidth(), rl.GetScreenHeight())
+	colorPickerConfig: ColorPickerConfig = {
+		bounds = rl.Rectangle{0, 0, 100, 100}, // TODO: make responsive
+	}
+	penColorButtonConfig: PenColorButtonConfig = {}
+	penColorButtonConfig.update = proc(this: ^PenColorButtonConfig, rel_width, rel_height: f32) {
+		this.x = rel_width * 0.015
+		this.y = rel_height * 0.05
+		this.width = rel_width * 0.05
+		this.height = rel_height - 2 * rel_height * 0.05
+	}
+	penColorButtonConfig->update(topPanelConfig.width, topPanelConfig.height)
+	config: Config = {
+		curColor               = rl.RED, // starting pen color
+		colorPickerConfig      = colorPickerConfig,
+		penColorSelectorConfig = {},
+		topPanelConfig         = topPanelConfig,
+		penColorButtonConfig   = penColorButtonConfig,
+	}
+	return config
+
 }

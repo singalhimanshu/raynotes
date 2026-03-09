@@ -7,7 +7,7 @@ ColorPickerConfig :: struct {
 	bounds: rl.Rectangle,
 }
 
-PenConfig :: struct {
+PenColorSelectorConfig :: struct {
 	isColorSelectorPressed: bool,
 }
 
@@ -19,10 +19,10 @@ TopPanelConfig :: struct {
 }
 
 Config :: struct {
-	curColor:          rl.Color,
-	colorPickerConfig: ColorPickerConfig,
-	penConfig:         PenConfig,
-	topPanelConfig:    TopPanelConfig,
+	curColor:               rl.Color,
+	colorPickerConfig:      ColorPickerConfig,
+	penColorSelectorConfig: PenColorSelectorConfig,
+	topPanelConfig:         TopPanelConfig,
 }
 
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
@@ -40,7 +40,7 @@ main :: proc() {
 	config: Config = {
 		curColor = rl.RED, // starting color
 		colorPickerConfig = {bounds = rl.Rectangle{10, 40, 100, 100}}, // TODO:
-		penConfig = {},
+		penColorSelectorConfig = {},
 		topPanelConfig = topPanelConfig,
 	}
 
@@ -92,9 +92,9 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 		nil,
 	)
 	if rl.GuiButton(rl.Rectangle{10, 10, 60, 40}, "Pen Color") {
-		config.penConfig.isColorSelectorPressed = !config.penConfig.isColorSelectorPressed
+		config.penColorSelectorConfig.isColorSelectorPressed = !config.penColorSelectorConfig.isColorSelectorPressed
 	}
-	if config.penConfig.isColorSelectorPressed {
+	if config.penColorSelectorConfig.isColorSelectorPressed {
 		rl.GuiColorPicker(config.colorPickerConfig.bounds, nil, &config.curColor)
 	}
 }
@@ -105,7 +105,7 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D) {
 	if mousePos.y > 50 &&
 	   rl.IsMouseButtonDown(.LEFT) &&
 	   isOutOfBounds(mousePos.x, mousePos.y, config.colorPickerConfig.bounds) {
-		config.penConfig.isColorSelectorPressed = false
+		config.penColorSelectorConfig.isColorSelectorPressed = false
 		mousePos := rl.GetMousePosition()
 		rl.BeginTextureMode(target)
 		rl.DrawCircle(i32(mousePos.x), i32(mousePos.y), 20, config.curColor)

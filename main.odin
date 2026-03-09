@@ -1,11 +1,13 @@
 package main
 
-import "core:fmt"
 import rl "vendor:raylib"
 
-// TODO: separate x, y, width, height
 ColorPickerConfig :: struct {
-	bounds: rl.Rectangle,
+	x:      f32,
+	y:      f32,
+	width:  f32,
+	height: f32,
+	update: proc(this: ^ColorPickerConfig, penColorButtonConfig: PenColorButtonConfig),
 }
 
 PenColorButtonConfig :: struct {
@@ -63,6 +65,7 @@ main :: proc() {
 				config.topPanelConfig.width,
 				config.topPanelConfig.height,
 			)
+			config.colorPickerConfig->update(config.penColorButtonConfig)
 		}
 		update(&config, target)
 		draw(target, &config)
@@ -107,7 +110,16 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 		config.penColorSelectorConfig.isColorSelectorPressed = !config.penColorSelectorConfig.isColorSelectorPressed
 	}
 	if config.penColorSelectorConfig.isColorSelectorPressed {
-		rl.GuiColorPicker(config.colorPickerConfig.bounds, nil, &config.curColor)
+		rl.GuiColorPicker(
+			rl.Rectangle {
+				config.colorPickerConfig.x,
+				config.colorPickerConfig.y,
+				config.colorPickerConfig.width,
+				config.colorPickerConfig.height,
+			},
+			nil,
+			&config.curColor,
+		)
 	}
 }
 
@@ -115,7 +127,16 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D) {
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
-	   isOutOfBounds(mousePos.x, mousePos.y, config.colorPickerConfig.bounds) {
+	   isOutOfBounds(
+		   mousePos.x,
+		   mousePos.y,
+		   rl.Rectangle {
+			   config.colorPickerConfig.x,
+			   config.colorPickerConfig.y,
+			   config.colorPickerConfig.width,
+			   config.colorPickerConfig.height,
+		   },
+	   ) {
 		config.penColorSelectorConfig.isColorSelectorPressed = false
 		mousePos := rl.GetMousePosition()
 		rl.BeginTextureMode(target)
@@ -139,9 +160,6 @@ create_config :: proc() -> Config {
 		this.height = f32(screen_height) * TOP_PANEL_HEIGHT_PERCENT
 	}
 	topPanelConfig->update(rl.GetScreenWidth(), rl.GetScreenHeight())
-	colorPickerConfig: ColorPickerConfig = {
-		bounds = rl.Rectangle{0, 0, 100, 100}, // TODO: make responsive
-	}
 	penColorButtonConfig: PenColorButtonConfig = {}
 	penColorButtonConfig.update = proc(this: ^PenColorButtonConfig, rel_width, rel_height: f32) {
 		this.x = rel_width * 0.015
@@ -150,13 +168,24 @@ create_config :: proc() -> Config {
 		this.height = rel_height - 2 * rel_height * 0.05
 	}
 	penColorButtonConfig->update(topPanelConfig.width, topPanelConfig.height)
+	colorPickerConfig: ColorPickerConfig = {}
+	colorPickerConfig.update = proc(
+		this: ^ColorPickerConfig,
+		penColorButtonConfig: PenColorButtonConfig,
+	) {
+		this.x = penColorButtonConfig.x
+		this.y = penColorButtonConfig.y + penColorButtonConfig.height
+		this.width = f32(rl.GetScreenWidth()) * 0.10
+		this.height = f32(rl.GetScreenHeight()) * 0.05
+	}
+	colorPickerConfig->update(penColorButtonConfig)
+	penColorSelectorConfig: PenColorSelectorConfig = {}
 	config: Config = {
 		curColor               = rl.RED, // starting pen color
 		colorPickerConfig      = colorPickerConfig,
-		penColorSelectorConfig = {},
+		penColorSelectorConfig = penColorSelectorConfig,
 		topPanelConfig         = topPanelConfig,
 		penColorButtonConfig   = penColorButtonConfig,
 	}
 	return config
-
 }

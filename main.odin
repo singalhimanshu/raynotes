@@ -106,7 +106,10 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height {
+		rl.HideCursor()
 		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), BRUSH_SIZE, config.curColor)
+	} else {
+		rl.ShowCursor()
 	}
 	rl.GuiPanel(
 		rl.Rectangle {

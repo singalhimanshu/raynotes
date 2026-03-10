@@ -38,6 +38,11 @@ Config :: struct {
 	penColorButtonConfig:   PenColorButtonConfig,
 }
 
+Point :: struct {
+	x: f32,
+	y: f32,
+}
+
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
 
 main :: proc() {
@@ -53,7 +58,9 @@ main :: proc() {
 	rl.ClearBackground(rl.RAYWHITE)
 	rl.EndTextureMode()
 
-	rl.SetTargetFPS(120)
+	prev_point: Point = {-1, -1}
+
+	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
 		if rl.IsWindowResized() {
@@ -67,7 +74,7 @@ main :: proc() {
 			)
 			config.colorPickerConfig->update(config.penColorButtonConfig)
 		}
-		update(&config, target)
+		update(&config, target, &prev_point)
 		draw(target, &config)
 	}
 	rl.UnloadRenderTexture(target)
@@ -123,7 +130,7 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 	}
 }
 
-update :: proc(config: ^Config, target: rl.RenderTexture2D) {
+update :: proc(config: ^Config, target: rl.RenderTexture2D, prev_point: ^Point) {
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
@@ -138,10 +145,30 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D) {
 		   },
 	   ) {
 		config.penColorSelectorConfig.isColorSelectorPressed = false
-		mousePos := rl.GetMousePosition()
-		rl.BeginTextureMode(target)
-		rl.DrawCircle(i32(mousePos.x), i32(mousePos.y), 20, config.curColor) // TODO: implement pen size
-		rl.EndTextureMode()
+		if prev_point.x != -1 && prev_point.y != -1 {
+			rl.BeginTextureMode(target)
+			start_point := rl.Vector2{prev_point.x, prev_point.y}
+			end_point := rl.Vector2{mousePos.x, mousePos.y}
+			dist := rl.Vector2Distance(start_point, end_point)
+			dir := rl.Vector2Normalize(end_point - start_point)
+			spacing := 20 * 0.3
+			steps := int(dist) / int(spacing)
+			if steps == 0 {
+				rl.DrawCircleV({mousePos.x, mousePos.y}, 20, config.curColor)
+			} else {
+				for i in 0 ..< steps {
+					pos := start_point + (dir * (f32(i) * f32(spacing)))
+					rl.DrawCircleV(pos, 20, config.curColor)
+				}
+			}
+			rl.EndTextureMode()
+		}
+		prev_point.x = mousePos.x
+		prev_point.y = mousePos.y
+	}
+	if rl.IsMouseButtonReleased(.LEFT) {
+		prev_point.x = -1
+		prev_point.y = -1
 	}
 }
 

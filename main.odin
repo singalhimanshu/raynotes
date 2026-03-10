@@ -44,6 +44,9 @@ Point :: struct {
 }
 
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
+BRUSH_SIZE :: 10
+BACKGROUND_COLOR :: rl.BLACK
+
 
 main :: proc() {
 	rl.SetConfigFlags({rl.ConfigFlag.WINDOW_RESIZABLE})
@@ -55,7 +58,7 @@ main :: proc() {
 	target := rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
 	defer rl.UnloadRenderTexture(target)
 	rl.BeginTextureMode(target)
-	rl.ClearBackground(rl.RAYWHITE)
+	rl.ClearBackground(BACKGROUND_COLOR)
 	rl.EndTextureMode()
 
 	prev_point: Point = {-1, -1}
@@ -64,9 +67,19 @@ main :: proc() {
 
 	for !rl.WindowShouldClose() {
 		if rl.IsWindowResized() {
-			// TODO: problem: right now resizing will remove all the strokes
+			new_target := rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
+			rl.BeginTextureMode(new_target)
+			rl.ClearBackground(BACKGROUND_COLOR)
+			rl.DrawTextureRec(
+				target.texture,
+				rl.Rectangle{0, 0, f32(target.texture.width), f32(-target.texture.height)},
+				rl.Vector2{0, 0},
+				rl.WHITE,
+			)
+			rl.EndTextureMode()
 			rl.UnloadRenderTexture(target)
-			target = rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
+			target = new_target
+
 			config.topPanelConfig->update(rl.GetScreenWidth(), rl.GetScreenHeight())
 			config.penColorButtonConfig->update(
 				config.topPanelConfig.width,
@@ -77,13 +90,12 @@ main :: proc() {
 		update(&config, target, &prev_point)
 		draw(target, &config)
 	}
-	rl.UnloadRenderTexture(target)
 }
 
 draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 	rl.BeginDrawing()
 	defer rl.EndDrawing()
-	rl.ClearBackground(rl.RAYWHITE)
+	rl.ClearBackground(BACKGROUND_COLOR)
 
 	rl.DrawTextureRec(
 		target.texture,
@@ -151,14 +163,14 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D, prev_point: ^Point) 
 			end_point := rl.Vector2{mousePos.x, mousePos.y}
 			dist := rl.Vector2Distance(start_point, end_point)
 			dir := rl.Vector2Normalize(end_point - start_point)
-			spacing := 20 * 0.3
+			spacing := BRUSH_SIZE * 0.3
 			steps := int(dist) / int(spacing)
 			if steps == 0 {
-				rl.DrawCircleV({mousePos.x, mousePos.y}, 20, config.curColor)
+				rl.DrawCircleV({mousePos.x, mousePos.y}, BRUSH_SIZE, config.curColor)
 			} else {
 				for i in 0 ..< steps {
 					pos := start_point + (dir * (f32(i) * f32(spacing)))
-					rl.DrawCircleV(pos, 20, config.curColor)
+					rl.DrawCircleV(pos, BRUSH_SIZE, config.curColor)
 				}
 			}
 			rl.EndTextureMode()

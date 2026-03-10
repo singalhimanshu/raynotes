@@ -44,7 +44,7 @@ Point :: struct {
 }
 
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
-BRUSH_SIZE :: 10
+BRUSH_SIZE :: 5
 BACKGROUND_COLOR :: rl.BLACK
 
 
@@ -106,7 +106,7 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height {
-		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), 50, config.curColor) // TODO: implement pen size
+		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), BRUSH_SIZE, config.curColor)
 	}
 	rl.GuiPanel(
 		rl.Rectangle {
@@ -163,7 +163,7 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D, prev_point: ^Point) 
 			end_point := rl.Vector2{mousePos.x, mousePos.y}
 			dist := rl.Vector2Distance(start_point, end_point)
 			dir := rl.Vector2Normalize(end_point - start_point)
-			spacing := BRUSH_SIZE * 0.3
+			spacing := BRUSH_SIZE * 0.4
 			steps := int(dist) / int(spacing)
 			if steps == 0 {
 				rl.DrawCircleV({mousePos.x, mousePos.y}, BRUSH_SIZE, config.curColor)
@@ -181,6 +181,11 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D, prev_point: ^Point) 
 	if rl.IsMouseButtonReleased(.LEFT) {
 		prev_point.x = -1
 		prev_point.y = -1
+	}
+	if rl.IsKeyPressed(.E) {
+		rl.BeginTextureMode(target)
+		rl.ClearBackground(BACKGROUND_COLOR)
+		rl.EndTextureMode()
 	}
 }
 

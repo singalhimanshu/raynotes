@@ -72,6 +72,8 @@ main :: proc() {
 		zoom   = f32(1),
 	}
 
+	is_drawing := true
+
 	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
@@ -84,7 +86,7 @@ main :: proc() {
 			)
 			config.colorPickerConfig->update(config.penColorButtonConfig)
 		}
-		update(&config, target, &prev_point, &camera)
+		update(&config, target, &prev_point, &camera, &is_drawing)
 		draw(target, &config, camera)
 	}
 }
@@ -149,9 +151,11 @@ update :: proc(
 	target: rl.RenderTexture2D,
 	prev_point: ^Point,
 	camera: ^rl.Camera2D,
+	is_drawing: ^bool,
 ) {
 	mousePos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
-	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
+	if is_drawing^ &&
+	   mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
 	   is_out_of_bounds(
 		   mousePos.x,
@@ -202,6 +206,15 @@ update :: proc(
 			0.125,
 			64.0,
 		)
+	}
+	// panning
+	if rl.IsMouseButtonDown(.MIDDLE) || rl.IsKeyDown(.SPACE) {
+		is_drawing^ = false
+		mouse_delta := rl.GetMouseDelta()
+		mouse_delta = mouse_delta * (-1.0 / camera.zoom)
+		camera.target = camera.target + mouse_delta
+	} else {
+		is_drawing^ = true
 	}
 }
 

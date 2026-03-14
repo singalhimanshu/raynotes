@@ -21,7 +21,7 @@ PenColorButtonConfig :: struct {
 }
 
 PenColorSelectorConfig :: struct {
-	isColorSelectorPressed: bool,
+	is_color_selector_pressed: bool,
 }
 
 TopPanelConfig :: struct {
@@ -33,11 +33,11 @@ TopPanelConfig :: struct {
 }
 
 Config :: struct {
-	curColor:               rl.Color,
-	colorPickerConfig:      ColorPickerConfig,
-	penColorSelectorConfig: PenColorSelectorConfig,
-	topPanelConfig:         TopPanelConfig,
-	penColorButtonConfig:   PenColorButtonConfig,
+	cur_color:                 rl.Color,
+	color_picker_config:       ColorPickerConfig,
+	pen_color_selector_config: PenColorSelectorConfig,
+	top_panel_config:          TopPanelConfig,
+	pen_color_button_config:   PenColorButtonConfig,
 }
 
 Point :: struct {
@@ -87,12 +87,12 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		if rl.IsWindowResized() {
 			camera.offset = {f32(rl.GetScreenWidth() / 2), f32(rl.GetScreenHeight() / 2)}
-			config.topPanelConfig->update(rl.GetScreenWidth(), rl.GetScreenHeight())
-			config.penColorButtonConfig->update(
-				config.topPanelConfig.width,
-				config.topPanelConfig.height,
+			config.top_panel_config->update(rl.GetScreenWidth(), rl.GetScreenHeight())
+			config.pen_color_button_config->update(
+				config.top_panel_config.width,
+				config.top_panel_config.height,
 			)
-			config.colorPickerConfig->update(config.penColorButtonConfig)
+			config.color_picker_config->update(config.pen_color_button_config)
 		}
 		update(&config, target, &prev_point, &camera, &is_drawing, &tool_selected)
 		draw(target, &config, camera)
@@ -115,42 +115,42 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config, camera: rl.Camera2D) {
 	rl.EndMode2D()
 
 	mousePos := rl.GetMousePosition()
-	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height {
+	if mousePos.y > config.top_panel_config.y + config.top_panel_config.height {
 		rl.HideCursor()
-		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), BRUSH_SIZE, config.curColor)
+		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), BRUSH_SIZE, config.cur_color)
 	} else {
 		rl.ShowCursor()
 	}
 	rl.GuiPanel(
 		rl.Rectangle {
-			config.topPanelConfig.x,
-			config.topPanelConfig.y,
-			config.topPanelConfig.width,
-			config.topPanelConfig.height,
+			config.top_panel_config.x,
+			config.top_panel_config.y,
+			config.top_panel_config.width,
+			config.top_panel_config.height,
 		},
 		nil,
 	)
 	if rl.GuiButton(
 		rl.Rectangle {
-			config.penColorButtonConfig.x,
-			config.penColorButtonConfig.y,
-			config.penColorButtonConfig.width,
-			config.penColorButtonConfig.height,
+			config.pen_color_button_config.x,
+			config.pen_color_button_config.y,
+			config.pen_color_button_config.width,
+			config.pen_color_button_config.height,
 		},
 		"Pen Color",
 	) {
-		config.penColorSelectorConfig.isColorSelectorPressed = !config.penColorSelectorConfig.isColorSelectorPressed
+		config.pen_color_selector_config.is_color_selector_pressed = !config.pen_color_selector_config.is_color_selector_pressed
 	}
-	if config.penColorSelectorConfig.isColorSelectorPressed {
+	if config.pen_color_selector_config.is_color_selector_pressed {
 		rl.GuiColorPicker(
 			rl.Rectangle {
-				config.colorPickerConfig.x,
-				config.colorPickerConfig.y,
-				config.colorPickerConfig.width,
-				config.colorPickerConfig.height,
+				config.color_picker_config.x,
+				config.color_picker_config.y,
+				config.color_picker_config.width,
+				config.color_picker_config.height,
 			},
 			nil,
-			&config.curColor,
+			&config.cur_color,
 		)
 	}
 }
@@ -166,23 +166,23 @@ update :: proc(
 	mousePos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
 	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
 	   is_drawing^ &&
-	   mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
+	   mousePos.y > config.top_panel_config.y + config.top_panel_config.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
 	   is_out_of_bounds(
 		   mousePos.x,
 		   mousePos.y,
 		   rl.Rectangle {
-			   config.colorPickerConfig.x,
-			   config.colorPickerConfig.y,
-			   config.colorPickerConfig.width,
-			   config.colorPickerConfig.height,
+			   config.color_picker_config.x,
+			   config.color_picker_config.y,
+			   config.color_picker_config.width,
+			   config.color_picker_config.height,
 		   },
 	   ) {
-		draw_color := config.curColor
+		draw_color := config.cur_color
 		if tool_selected^ == .ERASER {
 			draw_color = BACKGROUND_COLOR
 		}
-		config.penColorSelectorConfig.isColorSelectorPressed = false
+		config.pen_color_selector_config.is_color_selector_pressed = false
 		if prev_point.x != -1 && prev_point.y != -1 {
 			rl.BeginTextureMode(target)
 			start_point := rl.Vector2{prev_point.x, prev_point.y}
@@ -282,11 +282,11 @@ create_config :: proc() -> Config {
 	colorPickerConfig->update(penColorButtonConfig)
 	penColorSelectorConfig: PenColorSelectorConfig = {}
 	config: Config = {
-		curColor               = rl.RED, // starting pen color
-		colorPickerConfig      = colorPickerConfig,
-		penColorSelectorConfig = penColorSelectorConfig,
-		topPanelConfig         = topPanelConfig,
-		penColorButtonConfig   = penColorButtonConfig,
+		cur_color                 = rl.RED, // starting pen color
+		color_picker_config       = colorPickerConfig,
+		pen_color_selector_config = penColorSelectorConfig,
+		top_panel_config          = topPanelConfig,
+		pen_color_button_config   = penColorButtonConfig,
 	}
 	return config
 }

@@ -1,5 +1,7 @@
 package main
 
+import "core:fmt"
+import "core:math"
 import rl "vendor:raylib"
 
 ColorPickerConfig :: struct {
@@ -46,6 +48,7 @@ Point :: struct {
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
 BRUSH_SIZE :: 5
 BACKGROUND_COLOR :: rl.BLACK
+CANVAS_SIZE :: 10_000
 
 
 main :: proc() {
@@ -55,7 +58,7 @@ main :: proc() {
 
 	config := create_config()
 
-	target := rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
+	target := rl.LoadRenderTexture(CANVAS_SIZE, CANVAS_SIZE)
 	defer rl.UnloadRenderTexture(target)
 	rl.BeginTextureMode(target)
 	rl.ClearBackground(BACKGROUND_COLOR)
@@ -63,23 +66,17 @@ main :: proc() {
 
 	prev_point: Point = {-1, -1}
 
+	camera := rl.Camera2D {
+		offset = {f32(rl.GetScreenWidth() / 2), f32(rl.GetScreenHeight() / 2)},
+		target = {f32(CANVAS_SIZE / 2), f32(CANVAS_SIZE / 2)},
+		zoom   = f32(1),
+	}
+
 	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
 		if rl.IsWindowResized() {
-			new_target := rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
-			rl.BeginTextureMode(new_target)
-			rl.ClearBackground(BACKGROUND_COLOR)
-			rl.DrawTextureRec(
-				target.texture,
-				rl.Rectangle{0, 0, f32(target.texture.width), f32(-target.texture.height)},
-				rl.Vector2{0, 0},
-				rl.WHITE,
-			)
-			rl.EndTextureMode()
-			rl.UnloadRenderTexture(target)
-			target = new_target
-
+			camera.offset = {f32(rl.GetScreenWidth() / 2), f32(rl.GetScreenHeight() / 2)}
 			config.topPanelConfig->update(rl.GetScreenWidth(), rl.GetScreenHeight())
 			config.penColorButtonConfig->update(
 				config.topPanelConfig.width,
@@ -87,15 +84,16 @@ main :: proc() {
 			)
 			config.colorPickerConfig->update(config.penColorButtonConfig)
 		}
-		update(&config, target, &prev_point)
-		draw(target, &config)
+		update(&config, target, &prev_point, &camera)
+		draw(target, &config, camera)
 	}
 }
 
-draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
+draw :: proc(target: rl.RenderTexture2D, config: ^Config, camera: rl.Camera2D) {
 	rl.BeginDrawing()
 	defer rl.EndDrawing()
-	rl.ClearBackground(BACKGROUND_COLOR)
+	rl.BeginMode2D(camera)
+	rl.ClearBackground(rl.RAYWHITE)
 
 	rl.DrawTextureRec(
 		target.texture,
@@ -103,6 +101,7 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 		rl.Vector2{0, 0},
 		rl.WHITE,
 	)
+	rl.EndMode2D()
 
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height {
@@ -145,8 +144,13 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config) {
 	}
 }
 
-update :: proc(config: ^Config, target: rl.RenderTexture2D, prev_point: ^Point) {
-	mousePos := rl.GetMousePosition()
+update :: proc(
+	config: ^Config,
+	target: rl.RenderTexture2D,
+	prev_point: ^Point,
+	camera: ^rl.Camera2D,
+) {
+	mousePos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
 	if mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
 	   is_out_of_bounds(
@@ -189,6 +193,15 @@ update :: proc(config: ^Config, target: rl.RenderTexture2D, prev_point: ^Point) 
 		rl.BeginTextureMode(target)
 		rl.ClearBackground(BACKGROUND_COLOR)
 		rl.EndTextureMode()
+	}
+	if rl.GetMouseWheelMove() != 0 {
+		camera.target = rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
+		camera.offset = rl.GetMousePosition()
+		camera.zoom = rl.Clamp(
+			math.exp_f32(math.log_f32(camera.zoom, math.E) + f32(rl.GetMouseWheelMove() * 0.1)),
+			0.125,
+			64.0,
+		)
 	}
 }
 

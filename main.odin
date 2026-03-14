@@ -45,6 +45,12 @@ Point :: struct {
 	y: f32,
 }
 
+Tool :: enum {
+	PEN,
+	ERASER,
+	PAN,
+}
+
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
 BRUSH_SIZE :: 5
 BACKGROUND_COLOR :: rl.BLACK
@@ -74,6 +80,8 @@ main :: proc() {
 
 	is_drawing := true
 
+	tool_selected := Tool.PEN
+
 	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
@@ -86,8 +94,9 @@ main :: proc() {
 			)
 			config.colorPickerConfig->update(config.penColorButtonConfig)
 		}
-		update(&config, target, &prev_point, &camera, &is_drawing)
+		update(&config, target, &prev_point, &camera, &is_drawing, &tool_selected)
 		draw(target, &config, camera)
+		fmt.println(tool_selected)
 	}
 }
 
@@ -152,9 +161,11 @@ update :: proc(
 	prev_point: ^Point,
 	camera: ^rl.Camera2D,
 	is_drawing: ^bool,
+	tool_selected: ^Tool,
 ) {
 	mousePos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
-	if is_drawing^ &&
+	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
+	   is_drawing^ &&
 	   mousePos.y > config.topPanelConfig.y + config.topPanelConfig.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
 	   is_out_of_bounds(
@@ -167,6 +178,10 @@ update :: proc(
 			   config.colorPickerConfig.height,
 		   },
 	   ) {
+		draw_color := config.curColor
+		if tool_selected^ == .ERASER {
+			draw_color = BACKGROUND_COLOR
+		}
 		config.penColorSelectorConfig.isColorSelectorPressed = false
 		if prev_point.x != -1 && prev_point.y != -1 {
 			rl.BeginTextureMode(target)
@@ -177,11 +192,11 @@ update :: proc(
 			spacing := BRUSH_SIZE * 0.4
 			steps := int(dist) / int(spacing)
 			if steps == 0 {
-				rl.DrawCircleV({mousePos.x, mousePos.y}, BRUSH_SIZE, config.curColor)
+				rl.DrawCircleV({mousePos.x, mousePos.y}, BRUSH_SIZE, draw_color)
 			} else {
 				for i in 0 ..< steps {
 					pos := start_point + (dir * (f32(i) * f32(spacing)))
-					rl.DrawCircleV(pos, BRUSH_SIZE, config.curColor)
+					rl.DrawCircleV(pos, BRUSH_SIZE, draw_color)
 				}
 			}
 			rl.EndTextureMode()
@@ -193,7 +208,7 @@ update :: proc(
 		prev_point.x = -1
 		prev_point.y = -1
 	}
-	if rl.IsKeyPressed(.E) {
+	if rl.IsKeyPressed(.X) {
 		rl.BeginTextureMode(target)
 		rl.ClearBackground(BACKGROUND_COLOR)
 		rl.EndTextureMode()
@@ -208,13 +223,26 @@ update :: proc(
 		)
 	}
 	// panning
-	if rl.IsMouseButtonDown(.MIDDLE) || rl.IsKeyDown(.SPACE) {
+	if rl.IsKeyDown(.SPACE) {
 		is_drawing^ = false
 		mouse_delta := rl.GetMouseDelta()
 		mouse_delta = mouse_delta * (-1.0 / camera.zoom)
 		camera.target = camera.target + mouse_delta
-	} else {
+		tool_selected^ = .PAN
+	}
+	if rl.IsKeyReleased(.SPACE) {
 		is_drawing^ = true
+		// TODO: better to store the last tool and reset to that
+		tool_selected^ = .PEN
+	}
+	if rl.IsKeyPressed(.R) {
+		camera.zoom = 1.0
+	}
+	if rl.IsKeyPressed(.E) {
+		tool_selected^ = .ERASER
+	}
+	if rl.IsKeyPressed(.D) {
+		tool_selected^ = .PEN
 	}
 }
 

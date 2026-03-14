@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
@@ -38,6 +37,7 @@ Config :: struct {
 	pen_color_selector_config: PenColorSelectorConfig,
 	top_panel_config:          TopPanelConfig,
 	pen_color_button_config:   PenColorButtonConfig,
+	brush_size:                f32,
 }
 
 Point :: struct {
@@ -52,9 +52,9 @@ Tool :: enum {
 }
 
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
-BRUSH_SIZE :: 5
 BACKGROUND_COLOR :: rl.BLACK
 CANVAS_SIZE :: 10_000
+INITIAL_BRUSH_SIZE :: 5
 
 
 main :: proc() {
@@ -96,7 +96,6 @@ main :: proc() {
 		}
 		update(&config, target, &prev_point, &camera, &is_drawing, &tool_selected)
 		draw(target, &config, camera)
-		fmt.println(tool_selected)
 	}
 }
 
@@ -117,7 +116,7 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config, camera: rl.Camera2D) {
 	mousePos := rl.GetMousePosition()
 	if mousePos.y > config.top_panel_config.y + config.top_panel_config.height {
 		rl.HideCursor()
-		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), BRUSH_SIZE, config.cur_color)
+		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), config.brush_size, config.cur_color)
 	} else {
 		rl.ShowCursor()
 	}
@@ -189,14 +188,14 @@ update :: proc(
 			end_point := rl.Vector2{mousePos.x, mousePos.y}
 			dist := rl.Vector2Distance(start_point, end_point)
 			dir := rl.Vector2Normalize(end_point - start_point)
-			spacing := BRUSH_SIZE * 0.4
+			spacing := config.brush_size * 0.4
 			steps := int(dist) / int(spacing)
 			if steps == 0 {
-				rl.DrawCircleV({mousePos.x, mousePos.y}, BRUSH_SIZE, draw_color)
+				rl.DrawCircleV({mousePos.x, mousePos.y}, config.brush_size, draw_color)
 			} else {
 				for i in 0 ..< steps {
 					pos := start_point + (dir * (f32(i) * f32(spacing)))
-					rl.DrawCircleV(pos, BRUSH_SIZE, draw_color)
+					rl.DrawCircleV(pos, config.brush_size, draw_color)
 				}
 			}
 			rl.EndTextureMode()
@@ -213,7 +212,7 @@ update :: proc(
 		rl.ClearBackground(BACKGROUND_COLOR)
 		rl.EndTextureMode()
 	}
-	if rl.GetMouseWheelMove() != 0 {
+	if rl.GetMouseWheelMove() != 0 && !rl.IsKeyDown(.LEFT_SHIFT) {
 		camera.target = rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
 		camera.offset = rl.GetMousePosition()
 		camera.zoom = rl.Clamp(
@@ -243,6 +242,9 @@ update :: proc(
 	}
 	if rl.IsKeyPressed(.D) {
 		tool_selected^ = .PEN
+	}
+	if rl.IsKeyDown(.LEFT_SHIFT) {
+		config.brush_size = rl.Clamp(config.brush_size + rl.GetMouseWheelMove() * 4.0, 2.0, 50.0)
 	}
 }
 
@@ -287,6 +289,7 @@ create_config :: proc() -> Config {
 		pen_color_selector_config = penColorSelectorConfig,
 		top_panel_config          = topPanelConfig,
 		pen_color_button_config   = penColorButtonConfig,
+		brush_size                = INITIAL_BRUSH_SIZE,
 	}
 	return config
 }

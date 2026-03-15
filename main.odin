@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
@@ -209,7 +208,6 @@ update :: proc(
 		   },
 	   ) {
 		stroke_idx^ += 1
-		fmt.println("stroke_idx:", stroke_idx^)
 	}
 	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
 	   is_drawing^ &&
@@ -240,8 +238,6 @@ update :: proc(
 			   cur_stroke.points[len(cur_stroke.points) - 1].y == cur_point.y) {
 			append(&cur_stroke.points, cur_point)
 			stroke_list.strokes[stroke_idx^] = cur_stroke
-			fmt.println("stroke_list:", stroke_list)
-			fmt.println("len(stroke_list.strokes):", len(stroke_list.strokes))
 		}
 		rl.BeginTextureMode(target)
 		rl.ClearBackground(BACKGROUND_COLOR)

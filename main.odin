@@ -47,8 +47,9 @@ Tool :: enum {
 }
 
 Stroke :: struct {
-	points:       [dynamic]rl.Vector2,
-	stroke_color: rl.Color,
+	points:           [dynamic]rl.Vector2,
+	stroke_color:     rl.Color,
+	stroke_thickness: f32,
 }
 
 Stroke_List :: struct {
@@ -212,7 +213,10 @@ update :: proc(
 		config.pen_color_selector_config.is_color_selector_pressed = false
 		cur_point: rl.Vector2 = {mousePos.x, mousePos.y}
 		if stroke_idx^ >= len(stroke_list.strokes) {
-			append(&stroke_list.strokes, Stroke{stroke_color = draw_color})
+			append(
+				&stroke_list.strokes,
+				Stroke{stroke_color = draw_color, stroke_thickness = config.brush_size},
+			)
 		}
 		cur_stroke := stroke_list.strokes[stroke_idx^]
 		if !(len(cur_stroke.points) > 0 &&
@@ -230,7 +234,7 @@ update :: proc(
 			if len(stroke.points) == 1 {
 				rl.DrawCircleV(
 					{stroke.points[0].x, stroke.points[0].y},
-					config.brush_size,
+					stroke.stroke_thickness,
 					stroke.stroke_color,
 				)
 			} else if len(stroke.points) < 4 {
@@ -245,14 +249,14 @@ update :: proc(
 					steps := int(dist) / int(spacing)
 					for i in 0 ..< steps {
 						pos := start_point + (dir * (f32(i) * f32(spacing)))
-						rl.DrawCircleV(pos, config.brush_size, stroke.stroke_color)
+						rl.DrawCircleV(pos, stroke.stroke_thickness, stroke.stroke_color)
 					}
 				}
 			} else {
 				rl.DrawSplineCatmullRom(
 					&stroke.points[0],
 					i32(len(stroke.points)),
-					config.brush_size,
+					stroke.stroke_thickness,
 					stroke.stroke_color,
 				)
 			}

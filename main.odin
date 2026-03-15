@@ -40,11 +40,6 @@ Config :: struct {
 	brush_size:                f32,
 }
 
-Point :: struct {
-	x: f32,
-	y: f32,
-}
-
 Tool :: enum {
 	PEN,
 	ERASER,
@@ -52,7 +47,7 @@ Tool :: enum {
 }
 
 Stroke :: struct {
-	points:       [dynamic]Point,
+	points:       [dynamic]rl.Vector2,
 	stroke_color: rl.Color,
 }
 
@@ -79,8 +74,6 @@ main :: proc() {
 	rl.ClearBackground(BACKGROUND_COLOR)
 	rl.EndTextureMode()
 
-	prev_point: Point = {-1, -1}
-
 	camera := rl.Camera2D {
 		offset = {f32(rl.GetScreenWidth() / 2), f32(rl.GetScreenHeight() / 2)},
 		target = {f32(CANVAS_SIZE / 2), f32(CANVAS_SIZE / 2)},
@@ -94,10 +87,9 @@ main :: proc() {
 	stroke_list := Stroke_List{}
 	defer {
 		for stroke in stroke_list.strokes {
-			stroke_points := stroke.points
-			clear(&stroke_points)
+			delete(stroke.points)
 		}
-		clear(&stroke_list.strokes)
+		delete(stroke_list.strokes)
 	}
 	stroke_idx := 0
 
@@ -113,16 +105,7 @@ main :: proc() {
 			)
 			config.color_picker_config->update(config.pen_color_button_config)
 		}
-		update(
-			&config,
-			target,
-			&prev_point,
-			&camera,
-			&is_drawing,
-			&tool_selected,
-			&stroke_list,
-			&stroke_idx,
-		)
+		update(&config, target, &camera, &is_drawing, &tool_selected, &stroke_list, &stroke_idx)
 		draw(target, &config, camera)
 	}
 }
@@ -185,7 +168,6 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config, camera: rl.Camera2D) {
 update :: proc(
 	config: ^Config,
 	target: rl.RenderTexture2D,
-	prev_point: ^Point,
 	camera: ^rl.Camera2D,
 	is_drawing: ^bool,
 	tool_selected: ^Tool,
@@ -228,7 +210,7 @@ update :: proc(
 			draw_color = BACKGROUND_COLOR
 		}
 		config.pen_color_selector_config.is_color_selector_pressed = false
-		cur_point: Point = {mousePos.x, mousePos.y}
+		cur_point: rl.Vector2 = {mousePos.x, mousePos.y}
 		if stroke_idx^ >= len(stroke_list.strokes) {
 			append(&stroke_list.strokes, Stroke{stroke_color = draw_color})
 		}
@@ -245,31 +227,37 @@ update :: proc(
 			if len(stroke.points) == 0 {
 				continue
 			}
-			rl.DrawCircleV(
-				{stroke.points[0].x, stroke.points[0].y},
-				config.brush_size,
-				stroke.stroke_color,
-			)
-			for i in 1 ..< len(stroke.points) {
-				prev_point := stroke.points[i - 1]
-				cur_point := stroke.points[i]
-				start_point := rl.Vector2{prev_point.x, prev_point.y}
-				end_point := rl.Vector2{cur_point.x, cur_point.y}
-				dist := rl.Vector2Distance(start_point, end_point)
-				dir := rl.Vector2Normalize(end_point - start_point)
-				spacing := config.brush_size * 0.4
-				steps := int(dist) / int(spacing)
-				for i in 0 ..< steps {
-					pos := start_point + (dir * (f32(i) * f32(spacing)))
-					rl.DrawCircleV(pos, config.brush_size, stroke.stroke_color)
+			if len(stroke.points) == 1 {
+				rl.DrawCircleV(
+					{stroke.points[0].x, stroke.points[0].y},
+					config.brush_size,
+					stroke.stroke_color,
+				)
+			} else if len(stroke.points) < 4 {
+				for i in 1 ..< len(stroke.points) {
+					prev_point := stroke.points[i - 1]
+					cur_point := stroke.points[i]
+					start_point := rl.Vector2{prev_point.x, prev_point.y}
+					end_point := rl.Vector2{cur_point.x, cur_point.y}
+					dist := rl.Vector2Distance(start_point, end_point)
+					dir := rl.Vector2Normalize(end_point - start_point)
+					spacing := config.brush_size * 0.4
+					steps := int(dist) / int(spacing)
+					for i in 0 ..< steps {
+						pos := start_point + (dir * (f32(i) * f32(spacing)))
+						rl.DrawCircleV(pos, config.brush_size, stroke.stroke_color)
+					}
 				}
+			} else {
+				rl.DrawSplineCatmullRom(
+					&stroke.points[0],
+					i32(len(stroke.points)),
+					config.brush_size,
+					stroke.stroke_color,
+				)
 			}
 		}
 		rl.EndTextureMode()
-	}
-	if rl.IsMouseButtonReleased(.LEFT) {
-		prev_point.x = -1
-		prev_point.y = -1
 	}
 	if rl.IsKeyPressed(.X) {
 		rl.BeginTextureMode(target)

@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
@@ -51,6 +52,15 @@ Tool :: enum {
 	PAN,
 }
 
+Stroke :: struct {
+	points:       [dynamic]Point,
+	stroke_color: rl.Color,
+}
+
+Stroke_List :: struct {
+	strokes: [dynamic]Stroke,
+}
+
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
 BACKGROUND_COLOR :: rl.BLACK
 CANVAS_SIZE :: 10_000
@@ -82,6 +92,16 @@ main :: proc() {
 
 	tool_selected := Tool.PEN
 
+	stroke_list := Stroke_List{}
+	defer {
+		for stroke in stroke_list.strokes {
+			stroke_points := stroke.points
+			clear(&stroke_points)
+		}
+		clear(&stroke_list.strokes)
+	}
+	stroke_idx := 0
+
 	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
@@ -94,7 +114,16 @@ main :: proc() {
 			)
 			config.color_picker_config->update(config.pen_color_button_config)
 		}
-		update(&config, target, &prev_point, &camera, &is_drawing, &tool_selected)
+		update(
+			&config,
+			target,
+			&prev_point,
+			&camera,
+			&is_drawing,
+			&tool_selected,
+			&stroke_list,
+			&stroke_idx,
+		)
 		draw(target, &config, camera)
 	}
 }
@@ -161,8 +190,27 @@ update :: proc(
 	camera: ^rl.Camera2D,
 	is_drawing: ^bool,
 	tool_selected: ^Tool,
+	stroke_list: ^Stroke_List,
+	stroke_idx: ^int,
 ) {
 	mousePos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
+	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
+	   is_drawing^ &&
+	   rl.IsMouseButtonReleased(.LEFT) &&
+	   mousePos.y > config.top_panel_config.y + config.top_panel_config.height &&
+	   is_out_of_bounds(
+		   mousePos.x,
+		   mousePos.y,
+		   rl.Rectangle {
+			   config.color_picker_config.x,
+			   config.color_picker_config.y,
+			   config.color_picker_config.width,
+			   config.color_picker_config.height,
+		   },
+	   ) {
+		stroke_idx^ += 1
+		fmt.println("stroke_idx:", stroke_idx^)
+	}
 	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
 	   is_drawing^ &&
 	   mousePos.y > config.top_panel_config.y + config.top_panel_config.height &&
@@ -182,26 +230,46 @@ update :: proc(
 			draw_color = BACKGROUND_COLOR
 		}
 		config.pen_color_selector_config.is_color_selector_pressed = false
-		if prev_point.x != -1 && prev_point.y != -1 {
-			rl.BeginTextureMode(target)
-			start_point := rl.Vector2{prev_point.x, prev_point.y}
-			end_point := rl.Vector2{mousePos.x, mousePos.y}
-			dist := rl.Vector2Distance(start_point, end_point)
-			dir := rl.Vector2Normalize(end_point - start_point)
-			spacing := config.brush_size * 0.4
-			steps := int(dist) / int(spacing)
-			if steps == 0 {
-				rl.DrawCircleV({mousePos.x, mousePos.y}, config.brush_size, draw_color)
-			} else {
+		cur_point: Point = {mousePos.x, mousePos.y}
+		if stroke_idx^ >= len(stroke_list.strokes) {
+			append(&stroke_list.strokes, Stroke{stroke_color = draw_color})
+		}
+		cur_stroke := stroke_list.strokes[stroke_idx^]
+		if !(len(cur_stroke.points) > 0 &&
+			   cur_stroke.points[len(cur_stroke.points) - 1].x == cur_point.x &&
+			   cur_stroke.points[len(cur_stroke.points) - 1].y == cur_point.y) {
+			append(&cur_stroke.points, cur_point)
+			stroke_list.strokes[stroke_idx^] = cur_stroke
+			fmt.println("stroke_list:", stroke_list)
+			fmt.println("len(stroke_list.strokes):", len(stroke_list.strokes))
+		}
+		rl.BeginTextureMode(target)
+		rl.ClearBackground(BACKGROUND_COLOR)
+		for stroke in stroke_list.strokes {
+			if len(stroke.points) == 0 {
+				continue
+			}
+			rl.DrawCircleV(
+				{stroke.points[0].x, stroke.points[0].y},
+				config.brush_size,
+				stroke.stroke_color,
+			)
+			for i in 1 ..< len(stroke.points) {
+				prev_point := stroke.points[i - 1]
+				cur_point := stroke.points[i]
+				start_point := rl.Vector2{prev_point.x, prev_point.y}
+				end_point := rl.Vector2{cur_point.x, cur_point.y}
+				dist := rl.Vector2Distance(start_point, end_point)
+				dir := rl.Vector2Normalize(end_point - start_point)
+				spacing := config.brush_size * 0.4
+				steps := int(dist) / int(spacing)
 				for i in 0 ..< steps {
 					pos := start_point + (dir * (f32(i) * f32(spacing)))
-					rl.DrawCircleV(pos, config.brush_size, draw_color)
+					rl.DrawCircleV(pos, config.brush_size, stroke.stroke_color)
 				}
 			}
-			rl.EndTextureMode()
 		}
-		prev_point.x = mousePos.x
-		prev_point.y = mousePos.y
+		rl.EndTextureMode()
 	}
 	if rl.IsMouseButtonReleased(.LEFT) {
 		prev_point.x = -1

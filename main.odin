@@ -226,39 +226,26 @@ update :: proc(
 			stroke_list.strokes[stroke_idx^] = cur_stroke
 		}
 		rl.BeginTextureMode(target)
-		rl.ClearBackground(BACKGROUND_COLOR)
-		for stroke in stroke_list.strokes {
-			if len(stroke.points) == 0 {
-				continue
-			}
-			if len(stroke.points) == 1 {
-				rl.DrawCircleV(
-					{stroke.points[0].x, stroke.points[0].y},
-					stroke.stroke_thickness,
-					stroke.stroke_color,
-				)
-			} else if len(stroke.points) < 4 {
-				for i in 1 ..< len(stroke.points) {
-					prev_point := stroke.points[i - 1]
-					cur_point := stroke.points[i]
-					start_point := rl.Vector2{prev_point.x, prev_point.y}
-					end_point := rl.Vector2{cur_point.x, cur_point.y}
-					dist := rl.Vector2Distance(start_point, end_point)
-					dir := rl.Vector2Normalize(end_point - start_point)
-					spacing := config.brush_size * 0.4
-					steps := int(dist) / int(spacing)
-					for i in 0 ..< steps {
-						pos := start_point + (dir * (f32(i) * f32(spacing)))
-						rl.DrawCircleV(pos, stroke.stroke_thickness, stroke.stroke_color)
-					}
+		if len(cur_stroke.points) == 1 {
+			rl.DrawCircleV(
+				{cur_stroke.points[0].x, cur_stroke.points[0].y},
+				cur_stroke.stroke_thickness,
+				cur_stroke.stroke_color,
+			)
+		} else {
+			for i in 1 ..< len(cur_stroke.points) {
+				prev_point := cur_stroke.points[i - 1]
+				cur_point := cur_stroke.points[i]
+				start_point := rl.Vector2{prev_point.x, prev_point.y}
+				end_point := rl.Vector2{cur_point.x, cur_point.y}
+				dist := rl.Vector2Distance(start_point, end_point)
+				dir := rl.Vector2Normalize(end_point - start_point)
+				spacing := config.brush_size * 0.4
+				steps := int(dist) / int(spacing)
+				for i in 0 ..< steps {
+					pos := start_point + (dir * (f32(i) * f32(spacing)))
+					rl.DrawCircleV(pos, cur_stroke.stroke_thickness, cur_stroke.stroke_color)
 				}
-			} else {
-				rl.DrawSplineCatmullRom(
-					&stroke.points[0],
-					i32(len(stroke.points)),
-					stroke.stroke_thickness,
-					stroke.stroke_color,
-				)
 			}
 		}
 		rl.EndTextureMode()

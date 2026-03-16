@@ -58,7 +58,7 @@ Stroke_List :: struct {
 
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
 BACKGROUND_COLOR :: rl.BLACK
-CANVAS_SIZE :: 4096
+CANVAS_SIZE :: 8192
 INITIAL_BRUSH_SIZE :: 5
 
 
@@ -175,14 +175,15 @@ update :: proc(
 	stroke_list: ^Stroke_List,
 	stroke_idx: ^int,
 ) {
-	mousePos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera^)
+	mouse_pos := rl.GetMousePosition()
+	world_mouse_pos := rl.GetScreenToWorld2D(mouse_pos, camera^)
 	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
 	   is_drawing^ &&
 	   rl.IsMouseButtonReleased(.LEFT) &&
-	   mousePos.y > config.top_panel_config.y + config.top_panel_config.height &&
+	   mouse_pos.y > config.top_panel_config.y + config.top_panel_config.height &&
 	   is_out_of_bounds(
-		   mousePos.x,
-		   mousePos.y,
+		   mouse_pos.x,
+		   mouse_pos.y,
 		   rl.Rectangle {
 			   config.color_picker_config.x,
 			   config.color_picker_config.y,
@@ -194,11 +195,11 @@ update :: proc(
 	}
 	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
 	   is_drawing^ &&
-	   mousePos.y > config.top_panel_config.y + config.top_panel_config.height &&
+	   mouse_pos.y > config.top_panel_config.y + config.top_panel_config.height &&
 	   rl.IsMouseButtonDown(.LEFT) &&
 	   is_out_of_bounds(
-		   mousePos.x,
-		   mousePos.y,
+		   mouse_pos.x,
+		   mouse_pos.y,
 		   rl.Rectangle {
 			   config.color_picker_config.x,
 			   config.color_picker_config.y,
@@ -211,7 +212,7 @@ update :: proc(
 			draw_color = BACKGROUND_COLOR
 		}
 		config.pen_color_selector_config.is_color_selector_pressed = false
-		cur_point: rl.Vector2 = {mousePos.x, mousePos.y}
+		cur_point: rl.Vector2 = {world_mouse_pos.x, world_mouse_pos.y}
 		if stroke_idx^ >= len(stroke_list.strokes) {
 			append(
 				&stroke_list.strokes,

@@ -218,12 +218,12 @@ update :: proc(
 				Stroke{stroke_color = draw_color, stroke_thickness = config.brush_size},
 			)
 		}
-		cur_stroke := stroke_list.strokes[stroke_list.stroke_idx]
+		cur_stroke := &stroke_list.strokes[stroke_list.stroke_idx]
 		if !(len(cur_stroke.points) > 0 &&
 			   cur_stroke.points[len(cur_stroke.points) - 1].x == cur_point.x &&
 			   cur_stroke.points[len(cur_stroke.points) - 1].y == cur_point.y) {
 			append(&cur_stroke.points, cur_point)
-			stroke_list.strokes[stroke_list.stroke_idx] = cur_stroke
+			stroke_list.strokes[stroke_list.stroke_idx] = cur_stroke^
 		}
 		rl.BeginTextureMode(target)
 		if len(cur_stroke.points) == 1 {

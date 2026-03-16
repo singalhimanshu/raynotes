@@ -237,12 +237,25 @@ update :: proc(
 		rl.BeginTextureMode(target)
 		points_count := len(cur_stroke.points)
 		if points_count == 1 {
-			rl.DrawCircleV(cur_stroke.points[0], cur_stroke.stroke_thickness * 0.5, cur_stroke.stroke_color)
-		}
-		else if points_count < 4 {
-			rl.DrawLineEx(cur_stroke.points[points_count - 2], cur_stroke.points[points_count - 1], cur_stroke.stroke_thickness, cur_stroke.stroke_color)
+			rl.DrawCircleV(
+				cur_stroke.points[0],
+				cur_stroke.stroke_thickness * 0.5,
+				cur_stroke.stroke_color,
+			)
+		} else if points_count < 4 {
+			rl.DrawLineEx(
+				cur_stroke.points[points_count - 2],
+				cur_stroke.points[points_count - 1],
+				cur_stroke.stroke_thickness,
+				cur_stroke.stroke_color,
+			)
 		} else {
-			rl.DrawSplineCatmullRom(&cur_stroke.points[0], i32(len(cur_stroke.points)), cur_stroke.stroke_thickness, cur_stroke.stroke_color)
+			rl.DrawSplineCatmullRom(
+				&cur_stroke.points[0],
+				i32(len(cur_stroke.points)),
+				cur_stroke.stroke_thickness,
+				cur_stroke.stroke_color,
+			)
 		}
 		rl.EndTextureMode()
 	}
@@ -332,3 +345,4 @@ create_config :: proc() -> Config {
 	}
 	return config
 }
+

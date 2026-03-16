@@ -126,7 +126,17 @@ draw :: proc(target: rl.RenderTexture2D, config: ^Config, camera: rl.Camera2D) {
 	rl.EndMode2D()
 
 	mousePos := rl.GetMousePosition()
-	if mousePos.y > config.top_panel_config.y + config.top_panel_config.height {
+	if is_out_of_bounds(
+		   mousePos.x,
+		   mousePos.y,
+		   rl.Rectangle {
+			   config.color_picker_config.x,
+			   config.color_picker_config.y,
+			   config.color_picker_config.width,
+			   config.color_picker_config.height,
+		   },
+	   ) &&
+	   mousePos.y > config.top_panel_config.y + config.top_panel_config.height {
 		rl.HideCursor()
 		rl.DrawCircle(rl.GetMouseX(), rl.GetMouseY(), config.brush_size, config.cur_color)
 	} else {

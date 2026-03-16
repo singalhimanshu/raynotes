@@ -233,30 +233,16 @@ update :: proc(
 			   cur_stroke.points[len(cur_stroke.points) - 1].x == cur_point.x &&
 			   cur_stroke.points[len(cur_stroke.points) - 1].y == cur_point.y) {
 			append(&cur_stroke.points, cur_point)
-			stroke_list.strokes[stroke_list.stroke_idx] = cur_stroke^
 		}
 		rl.BeginTextureMode(target)
-		if len(cur_stroke.points) == 1 {
-			rl.DrawCircleV(
-				{cur_stroke.points[0].x, cur_stroke.points[0].y},
-				cur_stroke.stroke_thickness,
-				cur_stroke.stroke_color,
-			)
+		points_count := len(cur_stroke.points)
+		if points_count == 1 {
+			rl.DrawCircleV(cur_stroke.points[0], cur_stroke.stroke_thickness * 0.5, cur_stroke.stroke_color)
+		}
+		else if points_count < 4 {
+			rl.DrawLineEx(cur_stroke.points[points_count - 2], cur_stroke.points[points_count - 1], cur_stroke.stroke_thickness, cur_stroke.stroke_color)
 		} else {
-			for i in 1 ..< len(cur_stroke.points) {
-				prev_point := cur_stroke.points[i - 1]
-				cur_point := cur_stroke.points[i]
-				start_point := rl.Vector2{prev_point.x, prev_point.y}
-				end_point := rl.Vector2{cur_point.x, cur_point.y}
-				dist := rl.Vector2Distance(start_point, end_point)
-				dir := rl.Vector2Normalize(end_point - start_point)
-				spacing := config.brush_size * 0.4
-				steps := int(dist) / int(spacing)
-				for i in 0 ..< steps {
-					pos := start_point + (dir * (f32(i) * f32(spacing)))
-					rl.DrawCircleV(pos, cur_stroke.stroke_thickness, cur_stroke.stroke_color)
-				}
-			}
+			rl.DrawSplineCatmullRom(&cur_stroke.points[0], i32(len(cur_stroke.points)), cur_stroke.stroke_thickness, cur_stroke.stroke_color)
 		}
 		rl.EndTextureMode()
 	}

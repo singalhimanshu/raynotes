@@ -53,7 +53,8 @@ Stroke :: struct {
 }
 
 Stroke_List :: struct {
-	strokes: [dynamic]Stroke,
+	strokes:    [dynamic]Stroke,
+	stroke_idx: int,
 }
 
 TOP_PANEL_HEIGHT_PERCENT :: 0.025
@@ -64,7 +65,7 @@ INITIAL_BRUSH_SIZE :: 5
 
 main :: proc() {
 	rl.SetConfigFlags({rl.ConfigFlag.WINDOW_RESIZABLE})
-	rl.InitWindow(0, 0, "Raynotes")
+	rl.InitWindow(0, 0, "raynotes")
 	defer rl.CloseWindow()
 
 	config := create_config()
@@ -92,7 +93,6 @@ main :: proc() {
 		}
 		delete(stroke_list.strokes)
 	}
-	stroke_idx := 0
 
 	rl.SetTargetFPS(60)
 
@@ -106,7 +106,7 @@ main :: proc() {
 			)
 			config.color_picker_config->update(config.pen_color_button_config)
 		}
-		update(&config, target, &camera, &is_drawing, &tool_selected, &stroke_list, &stroke_idx)
+		update(&config, target, &camera, &is_drawing, &tool_selected, &stroke_list)
 		draw(target, &config, camera)
 	}
 }
@@ -173,7 +173,6 @@ update :: proc(
 	is_drawing: ^bool,
 	tool_selected: ^Tool,
 	stroke_list: ^Stroke_List,
-	stroke_idx: ^int,
 ) {
 	mouse_pos := rl.GetMousePosition()
 	world_mouse_pos := rl.GetScreenToWorld2D(mouse_pos, camera^)
@@ -191,7 +190,7 @@ update :: proc(
 			   config.color_picker_config.height,
 		   },
 	   ) {
-		stroke_idx^ += 1
+		stroke_list.stroke_idx += 1
 	}
 	if (tool_selected^ == .PEN || tool_selected^ == .ERASER) &&
 	   is_drawing^ &&
@@ -213,18 +212,18 @@ update :: proc(
 		}
 		config.pen_color_selector_config.is_color_selector_pressed = false
 		cur_point: rl.Vector2 = {world_mouse_pos.x, world_mouse_pos.y}
-		if stroke_idx^ >= len(stroke_list.strokes) {
+		if stroke_list.stroke_idx == len(stroke_list.strokes) {
 			append(
 				&stroke_list.strokes,
 				Stroke{stroke_color = draw_color, stroke_thickness = config.brush_size},
 			)
 		}
-		cur_stroke := stroke_list.strokes[stroke_idx^]
+		cur_stroke := stroke_list.strokes[stroke_list.stroke_idx]
 		if !(len(cur_stroke.points) > 0 &&
 			   cur_stroke.points[len(cur_stroke.points) - 1].x == cur_point.x &&
 			   cur_stroke.points[len(cur_stroke.points) - 1].y == cur_point.y) {
 			append(&cur_stroke.points, cur_point)
-			stroke_list.strokes[stroke_idx^] = cur_stroke
+			stroke_list.strokes[stroke_list.stroke_idx] = cur_stroke
 		}
 		rl.BeginTextureMode(target)
 		if len(cur_stroke.points) == 1 {
